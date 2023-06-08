@@ -1,4 +1,4 @@
-Some simple tests to run on Gfxr Convert to see if a code change impact the
+Some simple tests to run on Gfxr Convert to see if a code change impacts the
 conversion process.
 
 # Project Structure

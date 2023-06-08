@@ -9,7 +9,9 @@
 # Path to a temporary directory to create some named pipes in (defaults to /tmp if not specified)
 #
 # An example commandline I use locally (adapt to your paths):
-# /home/andrew/dev/gfxr-convert-tests/scripts/test_regressions.sh ~/dev/andrew-lunarg-gfxreconstruct dbuild/linux/x64  ~/temp/gfxr-convert-testing 
+#
+#     /home/andrew/dev/gfxr-convert-tests/scripts/test_regressions.sh ~/dev/andrew-lunarg-gfxreconstruct dbuild/linux/x64  ~/temp/gfxr-convert-testing
+#
 
 # Parameters
 BUILD_CONFIG="$2"
@@ -28,7 +30,7 @@ then
     TEMP_DIR="/tmp"
 fi
 
-CONVERT="$GFXR_ROOT/$BUILD_CONFIG/cmake_output/tools/convert/gfxrecon-convert"
+CONVERT="$GFXR_ROOT/$BUILD_CONFIG/cmake_output/tools/convert/gfxrecon-convert --expand-flags --format jsonl "
 
 # Work out what to test:
 INPUT_DIR="$(dirname $(dirname $(realpath $0)))"
@@ -54,6 +56,7 @@ do
     #echo "    PIPE_NAME: $PIPE_NAME"
 
     mkfifo "$PIPE_NAME"
+    mkfifo "$PIPE_NAME"_GOLDEN
 
     #cat "$PIPE_NAME" & 
     #cat "$GOLDEN" | head -n 5 >>"$PIPE_NAME"
@@ -62,14 +65,20 @@ do
     # pumped with JSON from a future convert, and comparing to the
     # golden reference conversion:
     echo "Diffing conversion of $GFXR for regressions now..." >> /dev/stderr
-    diff "$GOLDEN" "$PIPE_NAME" | egrep  -v "^..{\"header\":{\"source-path\":\""  &
+    # diff "$GOLDEN" "$PIPE_NAME" | egrep  -v "^..{\"header\":{\"source-path\":\""  &
+    diff "$PIPE_NAME"_GOLDEN "$PIPE_NAME" | egrep  -v "^..{\"header\":{\"source-path\":\""  &
+
+    cat "$GOLDEN" | jq >> "$PIPE_NAME"_GOLDEN &
 
     # Run convert, outputting to the named pipe so we don't have to
     # make any temporary files:
-    $CONVERT --output "$PIPE_NAME" "$GFXR"
+    # $CONVERT --output "$PIPE_NAME" "$GFXR"
+    $CONVERT --output stdout "$GFXR" --expand-flags --format jsonl| jq >> "$PIPE_NAME"
+
 
 
     rm "$PIPE_NAME"
+    rm "$PIPE_NAME"_GOLDEN
     sleep 1
     wait
 done
